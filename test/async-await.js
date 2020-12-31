@@ -245,3 +245,49 @@ tap.test('async-error', function (t) {
         t.end();
     });
 });
+
+tap.test('async-bug', function (t) {
+    runProgram('async-await', 'async-bug.js', function (r) {
+        var stdout = r.stdout.toString('utf8');
+        var lines = stdout.split('\n');
+        lines = lines.filter(function (line) {
+            return ! /^(\s+)at(\s+)<anonymous>$/.test(line);
+        });
+        stdout = lines.join('\n');
+
+        t.same(stripFullStack(stdout.toString('utf8')), [
+            'TAP version 13',
+            '# async-error',
+            'ok 1 before throw',
+            'ok 2 should be strictly equal',
+            'not ok 3 TypeError: Cannot read property \'length\' of null',
+            '  ---',
+            '    operator: error',
+            '    stack: |-',
+            '      TypeError: Cannot read property \'length\' of null',
+            '          at myCode ($TEST/async-await/async-bug.js:$LINE:$COL)',
+            '          at Test.myTest ($TEST/async-await/async-bug.js:$LINE:$COL)',
+            '  ...',
+            '',
+            '1..3',
+            '# tests 3',
+            '# pass  2',
+            '# fail  1',
+            '',
+            '',
+        ].join('\n'));
+        t.same(r.exitCode, 1);
+
+        var stderr = r.stderr.toString('utf8');
+        var lines = stderr.split('\n');
+        lines = lines.filter(function (line) {
+            return ! /\(timers.js:/.test(line) &&
+                ! /\(internal\/timers.js:/.test(line) &&
+                ! /Immediate\.next/.test(line);
+        });
+        stderr = lines.join('\n');
+
+        t.same(stderr, '');
+        t.end();
+    });
+});
